@@ -1,11 +1,13 @@
 ---
-- name: setup vpn clients
+- name: setup vpn client
   hosts: localhost
   connection: local
   become: yes
   vars:
-    server_pubkey: JRN2ePnb9UYzrtf8TdOni50wyqj0ZJG+83wttILdny4=
+    # Use system python so apt package is available
     ansible_python_interpreter: "/usr/bin/python3"
+    server_privkey: 2FrIzKMB0kfk2pHxY1myHIIk1Q1Uj6HvNI5TiSDN71M=
+    server_pubkey: 4nRBptktd5fcFdUbKdr1rIBJ4mShv+u22wMQKskFbVw=
   tasks:
   - name: install wireguard package
     apt:
@@ -36,26 +38,23 @@
       owner: root
       group: root
       mode: '0600'
-    notify: restart wireguard
-
-  handlers:
-  # Restarts WireGuard interface, loading any new config and running PostUp
-  # commands in the process. Notify this handler on client config changes.
-  - name: restart wireguard
-    shell: wg-quick down wg0; wg-quick up wg0
-    args:
-      executable: /bin/bash
 
 - name: setup vpn server
+  hosts: vpn
+- name: setup vpn server
   hosts: vpn_server
+  vars:
+    server_privkey: 2FrIzKMB0kfk2pHxY1myHIIk1Q1Uj6HvNI5TiSDN71M=
+    server_pubkey: 4nRBptktd5fcFdUbKdr1rIBJ4mShv+u22wMQKskFbVw=
   tasks:
-  # ...
+  # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html
   - name: install wireguard package
     apt:
       name: wireguard
       state: present
       update_cache: yes
 
+  # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html
   - name: create server wireguard config
     template:
       dest: /etc/wireguard/wg0.conf
@@ -63,8 +62,6 @@
       owner: root
       group: root
       mode: '0600'
-    notify: reload wireguard config
-
 
   # https://docs.ansible.com/ansible/latest/collections/ansible/posix/sysctl_module.html
   - name: enable and persist ip forwarding
@@ -82,11 +79,3 @@
       enabled: yes
       state: started
   # ...
-
-  handlers:
-  # Reloads config without disrupting current peer sessions, but does not
-  # re-run PostUp commands. Notify this handler on server config changes.
-  - name: reload wireguard config
-    shell: wg syncconf wg0 <(wg-quick strip wg0)
-    args:
-      executable: /bin/bash

@@ -1,18 +1,9 @@
 # {{ ansible_managed }}
 [Interface]
-Address = 10.0.0.1
+Address = 10.0.10.1
 ListenPort = 51820
 PrivateKey = {{ server_privkey }}
-SaveConfig = True
-
-PostUp = iptables -t nat -I POSTROUTING -o eth1 -j MASQUERADE
-PostUp = iptables -I INPUT 1 -i wg0 -j ACCEPT
-PostUp = iptables -I FORWARD 1 -i wg0 -o eth1 -j ACCEPT
-
-PreDown = iptables -t nat -D POSTROUTING -o eth1 -j MASQUERADE
-PreDown = iptables -D INPUT 1 -i wg0 -j ACCEPT
-PreDown = iptables -D FORWARD 1 -i wg0 -o eth1 -j ACCEPT
 
 [Peer]
 PublicKey = {{ hostvars['localhost'].pubkey }}
-AllowedIPs = 10.0.0.0/28
+AllowedIPs = 10.0.10.2
